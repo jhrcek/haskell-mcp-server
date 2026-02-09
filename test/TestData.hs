@@ -22,6 +22,10 @@ module TestData
   , recursiveParamsTestCases
   , SeparateParamsTestCase(..)
   , RecursiveParamsTestCase(..)
+
+    -- * All-types parsing test data
+  , allTypesTestCases
+  , AllTypesTestCase(..)
   ) where
 
 import Data.Text (Text)
@@ -30,7 +34,7 @@ import Data.Text (Text)
 data PromptTestCase = PromptTestCase
   { promptName :: Text
   , promptArgs :: [(Text, Text)]
-  , expectedResult :: Text
+  , expectedResult :: Either Text Text  -- Left for expected error message, Right for expected content
   , testDescription :: Text
   } deriving (Show, Eq)
 
@@ -77,31 +81,15 @@ data RecursiveParamsTestCase = RecursiveParamsTestCase
   } deriving (Show, Eq)
 
 -- | Prompt test cases
+-- Note: Comprehensive type parsing (Int/Double/Float/Bool/Text, required/optional, success/failure)
+-- is covered by AllTypesTestCase. These tests focus on prompt-specific behavior.
 promptTestCases :: [PromptTestCase]
 promptTestCases =
   [ PromptTestCase
       { promptName = "simple_prompt"
       , promptArgs = [("message", "hello")]
-      , expectedResult = "Simple prompt: hello"
+      , expectedResult = Right "Simple prompt: hello"
       , testDescription = "handles simple prompts correctly"
-      }
-  , PromptTestCase
-      { promptName = "complex_prompt"
-      , promptArgs = [("title", "urgent task"), ("priority", "5"), ("urgent", "true")]
-      , expectedResult = "Complex prompt: urgent task (priority=5, urgent=True)"
-      , testDescription = "handles complex prompts with multiple types"
-      }
-  , PromptTestCase
-      { promptName = "optional_prompt"
-      , promptArgs = [("required", "test")]
-      , expectedResult = "Optional prompt: test"
-      , testDescription = "handles optional prompts with missing optional field"
-      }
-  , PromptTestCase
-      { promptName = "optional_prompt"
-      , promptArgs = [("required", "test"), ("optional", "42")]
-      , expectedResult = "Optional prompt: test optional=42"
-      , testDescription = "handles optional prompts with optional field present"
       }
   ]
 
@@ -184,5 +172,155 @@ recursiveParamsTestCases =
       , recExpectedResult = "Processing data for Alice (age 30)"
       , recExpectedProperties = ["_ipName", "_ipAge"]
       , recTestDescription = "executes recursive parameter tools correctly"
+      }
+  ]
+
+-- | Test case for all-types tool (covers every type x required/optional x success/failure)
+data AllTypesTestCase = AllTypesTestCase
+  { atTestName   :: Text
+  , atTestArgs   :: [(Text, Text)]
+  , atTestResult :: Either (Text, Text) Text
+    -- ^ Left (errorConstructor, message) for expected errors, Right for expected content
+  } deriving (Show, Eq)
+
+allTypesTestCases :: [AllTypesTestCase]
+allTypesTestCases =
+  let
+    -- Base valid args for all required fields
+    validBase =
+      [ ("atInt", "42"), ("atInteger", "100"), ("atDouble", "3.14"), ("atFloat", "2.5")
+      , ("atBool", "true"), ("atText", "hello")
+      ]
+    -- All fields provided (required + optional)
+    allValid = validBase ++
+      [ ("atOptInt", "7"), ("atOptInteger", "99"), ("atOptDouble", "1.1"), ("atOptFloat", "0.5")
+      , ("atOptBool", "false"), ("atOptText", "world")
+      ]
+  in
+  -- === Success cases ===
+  [ AllTypesTestCase
+      { atTestName = "all required + all optional provided"
+      , atTestArgs = allValid
+      , atTestResult = Right "42,100,3.14,2.5,True,hello,Just 7,Just 99,Just 1.1,Just 0.5,Just False,Just \"world\""
+      }
+  , AllTypesTestCase
+      { atTestName = "all required, no optional"
+      , atTestArgs = validBase
+      , atTestResult = Right "42,100,3.14,2.5,True,hello,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing"
+      }
+
+  -- === Required field missing ===
+  , AllTypesTestCase
+      { atTestName = "missing required Int"
+      , atTestArgs = filter ((/= "atInt") . fst) validBase
+      , atTestResult = Left ("MissingRequiredParams", "field 'atInt' is missing")
+      }
+  , AllTypesTestCase
+      { atTestName = "missing required Integer"
+      , atTestArgs = filter ((/= "atInteger") . fst) validBase
+      , atTestResult = Left ("MissingRequiredParams", "field 'atInteger' is missing")
+      }
+  , AllTypesTestCase
+      { atTestName = "missing required Double"
+      , atTestArgs = filter ((/= "atDouble") . fst) validBase
+      , atTestResult = Left ("MissingRequiredParams", "field 'atDouble' is missing")
+      }
+  , AllTypesTestCase
+      { atTestName = "missing required Float"
+      , atTestArgs = filter ((/= "atFloat") . fst) validBase
+      , atTestResult = Left ("MissingRequiredParams", "field 'atFloat' is missing")
+      }
+  , AllTypesTestCase
+      { atTestName = "missing required Bool"
+      , atTestArgs = filter ((/= "atBool") . fst) validBase
+      , atTestResult = Left ("MissingRequiredParams", "field 'atBool' is missing")
+      }
+  , AllTypesTestCase
+      { atTestName = "missing required Text"
+      , atTestArgs = filter ((/= "atText") . fst) validBase
+      , atTestResult = Left ("MissingRequiredParams", "field 'atText' is missing")
+      }
+
+  -- === Required field parse failure ===
+  , AllTypesTestCase
+      { atTestName = "invalid required Int"
+      , atTestArgs = ("atInt", "notanint") : filter ((/= "atInt") . fst) validBase
+      , atTestResult = Left ("InvalidParams", "Failed to parse field 'atInt' from: notanint")
+      }
+  , AllTypesTestCase
+      { atTestName = "invalid required Integer"
+      , atTestArgs = ("atInteger", "nope") : filter ((/= "atInteger") . fst) validBase
+      , atTestResult = Left ("InvalidParams", "Failed to parse field 'atInteger' from: nope")
+      }
+  , AllTypesTestCase
+      { atTestName = "invalid required Double"
+      , atTestArgs = ("atDouble", "xyz") : filter ((/= "atDouble") . fst) validBase
+      , atTestResult = Left ("InvalidParams", "Failed to parse field 'atDouble' from: xyz")
+      }
+  , AllTypesTestCase
+      { atTestName = "invalid required Float"
+      , atTestArgs = ("atFloat", "abc") : filter ((/= "atFloat") . fst) validBase
+      , atTestResult = Left ("InvalidParams", "Failed to parse field 'atFloat' from: abc")
+      }
+  , AllTypesTestCase
+      { atTestName = "invalid required Bool"
+      , atTestArgs = ("atBool", "notbool") : filter ((/= "atBool") . fst) validBase
+      , atTestResult = Left ("InvalidParams", "Failed to parse field 'atBool' from: notbool")
+      }
+
+  -- === Optional field parse failure ===
+  , AllTypesTestCase
+      { atTestName = "invalid optional Int"
+      , atTestArgs = validBase ++ [("atOptInt", "bad")]
+      , atTestResult = Left ("InvalidParams", "Failed to parse field 'atOptInt' from: bad")
+      }
+  , AllTypesTestCase
+      { atTestName = "invalid optional Integer"
+      , atTestArgs = validBase ++ [("atOptInteger", "bad")]
+      , atTestResult = Left ("InvalidParams", "Failed to parse field 'atOptInteger' from: bad")
+      }
+  , AllTypesTestCase
+      { atTestName = "invalid optional Double"
+      , atTestArgs = validBase ++ [("atOptDouble", "bad")]
+      , atTestResult = Left ("InvalidParams", "Failed to parse field 'atOptDouble' from: bad")
+      }
+  , AllTypesTestCase
+      { atTestName = "invalid optional Float"
+      , atTestArgs = validBase ++ [("atOptFloat", "bad")]
+      , atTestResult = Left ("InvalidParams", "Failed to parse field 'atOptFloat' from: bad")
+      }
+  , AllTypesTestCase
+      { atTestName = "invalid optional Bool"
+      , atTestArgs = validBase ++ [("atOptBool", "bad")]
+      , atTestResult = Left ("InvalidParams", "Failed to parse field 'atOptBool' from: bad")
+      }
+
+  -- === Optional field parse success (selective) ===
+  , AllTypesTestCase
+      { atTestName = "optional Int provided"
+      , atTestArgs = validBase ++ [("atOptInt", "7")]
+      , atTestResult = Right "42,100,3.14,2.5,True,hello,Just 7,Nothing,Nothing,Nothing,Nothing,Nothing"
+      }
+  , AllTypesTestCase
+      { atTestName = "optional Bool provided"
+      , atTestArgs = validBase ++ [("atOptBool", "TRUE")]
+      , atTestResult = Right "42,100,3.14,2.5,True,hello,Nothing,Nothing,Nothing,Nothing,Just True,Nothing"
+      }
+  , AllTypesTestCase
+      { atTestName = "optional Text provided"
+      , atTestArgs = validBase ++ [("atOptText", "hi")]
+      , atTestResult = Right "42,100,3.14,2.5,True,hello,Nothing,Nothing,Nothing,Nothing,Nothing,Just \"hi\""
+      }
+
+  -- === Bool case insensitivity ===
+  , AllTypesTestCase
+      { atTestName = "Bool parses TRUE"
+      , atTestArgs = ("atBool", "TRUE") : filter ((/= "atBool") . fst) validBase
+      , atTestResult = Right "42,100,3.14,2.5,True,hello,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing"
+      }
+  , AllTypesTestCase
+      { atTestName = "Bool parses False"
+      , atTestArgs = ("atBool", "False") : filter ((/= "atBool") . fst) validBase
+      , atTestResult = Right "42,100,3.14,2.5,False,hello,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing"
       }
   ]

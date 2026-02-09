@@ -38,9 +38,14 @@ shouldContainText action expectedSubstring = do
       T.isInfixOf expectedSubstring content `shouldBe` True
     other -> expectationFailure $ "Expected ContentText containing '" ++ T.unpack expectedSubstring ++ "' but got: " ++ show other
 
-testPromptCall :: PromptGetHandler IO -> Text -> [(Text, Text)] -> Text -> IO ()
-testPromptCall handler name args expected =
+testPromptCall :: PromptGetHandler IO -> Text -> [(Text, Text)] -> Either Text Text -> IO ()
+testPromptCall handler name args (Right expected) =
   shouldReturnContentText (handler name args) expected
+testPromptCall handler name args (Left expectedErr) = do
+  result <- handler name args
+  case result of
+    Left (InvalidParams msg) -> msg `shouldBe` expectedErr
+    other -> expectationFailure $ "Expected InvalidParams but got: " ++ show other
 
 testResourceCall :: ResourceReadHandler IO -> String -> Text -> IO ()
 testResourceCall handler uriString expected = do

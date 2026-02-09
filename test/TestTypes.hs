@@ -103,6 +103,32 @@ testDescriptions =
     , ("y", "The second number")
     ]
 
+-- | Tool with every supported type as both required and optional fields
+data AllTypesTool = AllTypesTool
+    { atInt       :: Int
+    , atInteger   :: Integer
+    , atDouble    :: Double
+    , atFloat     :: Float
+    , atBool      :: Bool
+    , atText      :: Text
+    , atOptInt    :: Maybe Int
+    , atOptInteger:: Maybe Integer
+    , atOptDouble :: Maybe Double
+    , atOptFloat  :: Maybe Float
+    , atOptBool   :: Maybe Bool
+    , atOptText   :: Maybe Text
+    }
+    deriving (Show, Eq)
+
+handleAllTypesTool :: AllTypesTool -> IO Content
+handleAllTypesTool (AllTypesTool i ig d f b t oi oig od of_ ob ot) =
+    pure $ ContentText $ T.intercalate ","
+        [ T.pack (show i), T.pack (show ig), T.pack (show d), T.pack (show f)
+        , T.pack (show b), t
+        , T.pack (show oi), T.pack (show oig), T.pack (show od), T.pack (show of_)
+        , T.pack (show ob), T.pack (show ot)
+        ]
+
 -- Test descriptions for separate parameter types
 separateParamsDescriptions :: [(String, String)]
 separateParamsDescriptions =

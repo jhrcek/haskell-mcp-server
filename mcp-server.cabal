@@ -15,7 +15,7 @@ name: mcp-server
 -- PVP summary:     +-+------- breaking API changes
 --                  | | +----- non-breaking API additions
 --                  | | | +--- code changes with no API change
-version: 0.1.0.17
+version: 0.1.0.18
 -- A short (one-line) description of the package.
 synopsis: Library for building Model Context Protocol (MCP) servers
 -- A longer description of the package.
@@ -73,6 +73,9 @@ library
     MCP.Server.Transport.Http
     MCP.Server.Transport.Stdio
     MCP.Server.Types
+
+  other-modules:
+    MCP.Server.Derive.Internal
 
   -- Modules included in this library but not exported.
   -- other-modules:
@@ -168,6 +171,7 @@ test-suite haskell-mcp-server-test
     Spec.JSONConversion
     Spec.ProtocolVersionNegotiation
     Spec.SchemaValidation
+    Spec.ToolCallParsing
     Spec.UnicodeHandling
     TestData
     TestTypes

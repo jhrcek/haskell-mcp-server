@@ -92,6 +92,46 @@ handleRecursiveTool :: RecursiveTool -> IO Content
 handleRecursiveTool (ProcessData (MiddleParams (InnerParams name age))) =
     pure $ ContentText $ "Processing data for " <> name <> " (age " <> T.pack (show age) <> ")"
 
+-- Type covering all parseable field types for exhaustive parsing tests
+data AllTypesTool
+    = RequiredFields
+        { rfText :: Text
+        , rfInt :: Int
+        , rfInteger :: Integer
+        , rfDouble :: Double
+        , rfFloat :: Float
+        , rfBool :: Bool
+        }
+    | OptionalFields
+        { ofText :: Maybe Text
+        , ofInt :: Maybe Int
+        , ofInteger :: Maybe Integer
+        , ofDouble :: Maybe Double
+        , ofFloat :: Maybe Float
+        , ofBool :: Maybe Bool
+        }
+    deriving (Show, Eq)
+
+handleAllTypesTool :: AllTypesTool -> IO Content
+handleAllTypesTool (RequiredFields t i ig d f b) =
+    pure $ ContentText $ T.intercalate ", "
+        [ "text=" <> t
+        , "int=" <> T.pack (show i)
+        , "integer=" <> T.pack (show ig)
+        , "double=" <> T.pack (show d)
+        , "float=" <> T.pack (show f)
+        , "bool=" <> T.pack (show b)
+        ]
+handleAllTypesTool (OptionalFields t i ig d f b) =
+    pure $ ContentText $ T.intercalate ", "
+        [ "text=" <> maybe "Nothing" id t
+        , "int=" <> maybe "Nothing" (T.pack . show) i
+        , "integer=" <> maybe "Nothing" (T.pack . show) ig
+        , "double=" <> maybe "Nothing" (T.pack . show) d
+        , "float=" <> maybe "Nothing" (T.pack . show) f
+        , "bool=" <> maybe "Nothing" (T.pack . show) b
+        ]
+
 -- Test descriptions for custom description functionality
 testDescriptions :: [(String, String)]
 testDescriptions =
